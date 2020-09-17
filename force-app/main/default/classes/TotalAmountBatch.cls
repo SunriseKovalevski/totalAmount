@@ -17,11 +17,23 @@ global class TotalAmountBatch implements
         return childAccs;
     }
 
+//account.Total_Amount__c
+
     global void execute(Database.BatchableContext bc, List<Account> scope){
         // process each batch of records
+        Decimal sum = 0;
         List<Opportunity> opps = new List<Opportunity>();
         for (Account account : scope) {
-            //if (account)
+            if (account.ParentId == null) {
+                
+            } else {
+                for (Account ac :  searchLinks(account.Id, scope)) {
+                    for (Opportunity opp : ac.Opportunities) {
+                        sum += opp.Amount;
+                    }
+                    //opportunities .amount sum
+                }
+            }
           
         }
         
