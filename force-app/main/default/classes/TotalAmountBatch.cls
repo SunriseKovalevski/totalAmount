@@ -133,7 +133,7 @@ global class TotalAmountBatch implements
             tmpList = upLvlList(tmpList, scope);
             resList.addAll(tmpList); 
         }
-        System.debug (' *-*-*-*-*-* ' + resLiset );
+        System.debug (' *-*-*-*-*-* ' + resList );
        
 
 
