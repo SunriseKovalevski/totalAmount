@@ -8,9 +8,6 @@ global class TotalAmountBatch implements
         return Database.getQueryLocator('SELECT Id, Total_Amount__c, ParentId, '+
         '(SELECT Amount, StageName FROM Opportunities WHERE StageName = \'Closed Won\') FROM Account');
     }
-    //
-    // !!!!! НЕ ЗАБЫТЬ ОБНУЛИТЬ tA
-    //
 
     private List<Account> searchLinks (Id parent, List<Account> scope){
         List<Account> childAccs = new List<Account>();
@@ -32,9 +29,7 @@ global class TotalAmountBatch implements
         return retAcc;
     }
 
-    // поиск элементов на которые никто не ссылается
-    // метод вовращает лист элементов на которые нету ссылок
-
+    // search elements on that nobody have link. return List of elements without links from other accs
     private List<Account> leafElements (List <Account> scope) {
         List<Account> leafs = (List<Account>) scope;
         Integer j = 0;
@@ -52,22 +47,22 @@ global class TotalAmountBatch implements
         
     }
 
-    // функция принимающая лист акков нижнего уровня и возвращающая лист акков верхнего с посчитанными tA
+    //function that take low lvl acc list and return acc List higher lvl with calculate Total_Amounts
     public List<Account> upLvlList(List<Account> lowLvlList, List<Account> scope) {
         List<Account> acResList = new List<Account> ();
         Account tmp = new Account();
         for (Account ac : lowLvlList) {
             if (ac.ParentId != null) {
-                // считаем для акка с id == parentId totalAmount в который заплюсовываем ac.totalAmount
+                // calculate for acc with id == parentId totalAmount abd increment with ac.totalAmount
                 tmp = searchAccById(ac.ParentId,scope);
                 tmp.Total_Amount__c += ac.Total_Amount__c;
                 acResList.add(tmp);
             }
         }
-        //считаем оппсы для полученного листа аккаунтов предпоследнего уровня
+        //calculate  ooportunities for the prev lvl acc list 
         for (Account ac : acResList) {
             for (Opportunity op : ac.Opportunities) {
-                // в уже имеющие значения
+                //in to the existing values
                 ac.Total_Amount__c += op.Amount;    
             }
         }
@@ -83,9 +78,13 @@ global class TotalAmountBatch implements
 
         List<Account> leafAccs = new List<Account>();
         List<Account> fiveAccs = new List<Account>();
-        // получаем лист нижних элементов
+        // zeros into totalAmounts
+        for (Account a : scope) {
+            a.Total_Amount__c = 0;
+        }
+        // get List with leafs elements
         leafAccs = leafElements(scope);
-        // считаем для них total amount
+        // calculate total amount for him
         for (Account ac : leafAccs) {
             ac.Total_Amount__c = 0;
             for (Opportunity opp : ac.Opportunities) {
@@ -98,11 +97,11 @@ global class TotalAmountBatch implements
           }
         }
         
-        //выделяем в отдельный лист элементы на которые ссылаются нижние
+        // separate into diffrent List elements that at 5 lvl 
         Account tmp = new Account();
         for (Account ac : leafAccs) {
             if (ac.ParentId != null) {
-                // считаем для акка с id == parentId totalAmount в который заплюсовываем ac.totalAmount
+                // calculate for account that have id == parentId totalAmount in that increment ac.totalAmount
 
                 tmp = searchAccById(ac.ParentId, scope);
                 tmp.Total_Amount__c += ac.Total_Amount__c;
@@ -110,26 +109,24 @@ global class TotalAmountBatch implements
                 fiveAccs.add(tmp);
 
             }
-            //fiveAccs.addAll(searchLinks(ac.Id));
-            //в fiveAccs 
+
         }
-        //считаем оппсы для полученного листа аккаунтов предпоследнего уровня
+        //calculate opportunities for that account List 5 lvl
         for (Account ac : fiveAccs) {
             for (Opportunity op : ac.Opportunities) {
-                // в уже имеющие значения
+                //in to the existing values
                 ac.Total_Amount__c += op.Amount;
             }
         }
-        // тут имеем посчитанные акки нижнего и предпоследнего уровня, аналогичным образом должны считаться 5-4 4-3 3-2 2-1
-        // пишем функцию принимающую лист нижнего и возвращающую лист верхнего уровня с уже посчитанными tA
-        
+
+        // here we have calculate accs lowless and prev lvl, similarly  calculate other lvls
 
         resList.addAll(leafAccs);
-        //передали в результирующую коллекцию нижние элементы
+        //send to the res collection leaf elements
         List<Account> tmpList = new List<Account>();
         tmpList = upLvlList(leafAccs, scope);
-        // tmpList становится коллекцией с 5 уровнем
-        //добавляем к рез. коллекции 5 уровень
+        //tmpList here is a collection with accs from 5 lvl
+        // send to res collection
         resList.addAll(tmpList);
         for (Integer i = 0; i < 4; i++) {
             tmpList = upLvlList(tmpList, scope);
