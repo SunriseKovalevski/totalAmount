@@ -10,7 +10,7 @@ global class TotalAmountBatch implements
     // !!!!! НЕ ЗАБЫТЬ ОБНУЛИТЬ tA
     //
 
-    List<Account> searchLinks (Id parent, List<Account> scope){
+    private List<Account> searchLinks (Id parent, List<Account> scope){
         List<Account> childAccs = new List<Account>();
         for (Account acc : scope) {
             if (acc.parentId == parent) {
@@ -20,43 +20,44 @@ global class TotalAmountBatch implements
         return childAccs;
     }
 
-    Account searchById (Id accId, List<Account> scope) {
+    public Account searchAccById (Id accId, List<Account> scope) {
+        Account retAcc = new Account();
         for (Account acc : scope) {
             if (acc.Id == accId) {
-                return acc;
+                retAcc = acc;
             }
         }
+        return retAcc;
     }
 
     // поиск элементов на которые никто не ссылается
     // метод вовращает лист элементов на которые нету ссылок
 
-    List<Account> leafElements (List <Account> scope) {
-        List<Account> leafs = new List<Account> ();
-        leafs.addAll(scope);
+    private List<Account> leafElements (List <Account> scope) {
+        List<Account> leafs = (List<Account>) scope;
+        Integer j = 0;
         for (Account acc : scope) {
             if (acc.ParentId != null) {
-                Account rem = new Account();
-                for (Account accS : scope) {
-                    if (accS.Id == acc.ParentId) {
-                        leafs.remove(accS);
+                j=0;
+                while (j < leafs.size()) {
+                    if (leafs.get(j).Id == acc.ParentId) {
+                        leafs.remove(j);
                     }
                 }
             }
         }
-        System.debug(' ----   ' + leafs);
+        return leafs;
+        
     }
 
-//account.Total_Amount__c
-
     // функция принимающая лист акков нижнего уровня и возвращающая лист акков верхнего с посчитанными tA
-    List<Account> upLvlList(List<Account> lowLvlList) {
+    public List<Account> upLvlList(List<Account> lowLvlList, List<Account> scope) {
         List<Account> acResList = new List<Account> ();
-        Account tmp = Account();
+        Account tmp = new Account();
         for (Account ac : lowLvlList) {
             if (ac.ParentId != null) {
                 // считаем для акка с id == parentId totalAmount в который заплюсовываем ac.totalAmount
-                tmp = searchById(ac.ParentId);
+                tmp = searchAccById(ac.ParentId,scope);
                 tmp.Total_Amount__c += ac.Total_Amount__c;
                 acResList.add(tmp);
             }
@@ -65,7 +66,8 @@ global class TotalAmountBatch implements
         for (Account ac : acResList) {
             for (Opportunity op : ac.Opportunities) {
                 // в уже имеющие значения
-                ac.Total_Amont__c += op.Amount;
+                ac.Total_Amount__c += op.Amount;
+                
             }
         }
         return acResList;
@@ -96,12 +98,12 @@ global class TotalAmountBatch implements
         }
         
         //выделяем в отдельный лист элементы на которые ссылаются нижние
-        Account tmp = Account();
+        Account tmp = new Account();
         for (Account ac : leafAccs) {
             if (ac.ParentId != null) {
                 // считаем для акка с id == parentId totalAmount в который заплюсовываем ac.totalAmount
 
-                tmp = searchById(ac.ParentId);
+                tmp = searchAccById(ac.ParentId, scope);
                 tmp.Total_Amount__c += ac.Total_Amount__c;
                 
                 fiveAccs.add(tmp);
@@ -114,7 +116,7 @@ global class TotalAmountBatch implements
         for (Account ac : fiveAccs) {
             for (Opportunity op : ac.Opportunities) {
                 // в уже имеющие значения
-                ac.Total_Amont__c += op.Amount;
+                ac.Total_Amount__c += op.Amount;
             }
         }
         // тут имеем посчитанные акки нижнего и предпоследнего уровня, аналогичным образом должны считаться 5-4 4-3 3-2 2-1
