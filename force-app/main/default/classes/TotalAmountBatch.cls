@@ -49,6 +49,30 @@ global class TotalAmountBatch implements
 
 //account.Total_Amount__c
 
+    // функция принимающая лист акков нижнего уровня и возвращающая лист акков верхнего с посчитанными tA
+    List<Account> upLvlList(List<Account> lowLvlList) {
+        List<Account> acResList = new List<Account> ();
+        Account tmp = Account();
+        for (Account ac : lowLvlList) {
+            if (ac.ParentId != null) {
+                // считаем для акка с id == parentId totalAmount в который заплюсовываем ac.totalAmount
+                tmp = searchById(ac.ParentId);
+                tmp.Total_Amount__c += ac.Total_Amount__c;
+                acResList.add(tmp);
+            }
+        }
+        //считаем оппсы для полученного листа аккаунтов предпоследнего уровня
+        for (Account ac : acResList) {
+            for (Opportunity op : ac.Opportunities) {
+                // в уже имеющие значения
+                ac.Total_Amont__c += op.Amount;
+            }
+        }
+        return acResList;
+    }
+
+
+
     global void execute(Database.BatchableContext bc, List<Account> scope){
         // process each batch of records
         Decimal tA = 0;
@@ -80,7 +104,7 @@ global class TotalAmountBatch implements
                 tmp = searchById(ac.ParentId);
                 tmp.Total_Amount__c += ac.Total_Amount__c;
                 
-                fiveAccs.add(tmp)
+                fiveAccs.add(tmp);
 
             }
             //fiveAccs.addAll(searchLinks(ac.Id));
@@ -93,7 +117,10 @@ global class TotalAmountBatch implements
                 ac.Total_Amont__c += op.Amount;
             }
         }
-        
+        // тут имеем посчитанные акки нижнего и предпоследнего уровня, аналогичным образом должны считаться 5-4 4-3 3-2 2-1
+        // пишем функцию принимающую лист нижнего и возвращающую лист верхнего уровня с уже посчитанными tA
+
+
 
         for (Account account : scope) {
             if (account.ParentId != null) {
