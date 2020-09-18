@@ -66,8 +66,7 @@ global class TotalAmountBatch implements
         for (Account ac : acResList) {
             for (Opportunity op : ac.Opportunities) {
                 // в уже имеющие значения
-                ac.Total_Amount__c += op.Amount;
-                
+                ac.Total_Amount__c += op.Amount;    
             }
         }
         return acResList;
@@ -121,6 +120,21 @@ global class TotalAmountBatch implements
         }
         // тут имеем посчитанные акки нижнего и предпоследнего уровня, аналогичным образом должны считаться 5-4 4-3 3-2 2-1
         // пишем функцию принимающую лист нижнего и возвращающую лист верхнего уровня с уже посчитанными tA
+        
+        List<Account> resList = new List<Account>();
+        resList.addAll(leafAccs);
+        //передали в результирующую коллекцию нижние элементы
+        List<Account> tmpList = new List<Account>();
+        tmpList = upLvlList(leafAccs, scope);
+        // tmpList становится коллекцией с 5 уровнем
+        //добавляем к рез. коллекции 5 уровень
+        resList.addAll(tmpList);
+        for (Integer i = 0; i < 4; i++) {
+            tmpList = upLvlList(tmpList, scope);
+            resList.addAll(tmpList); 
+        }
+        System.debug (' *-*-*-*-*-* ' + resLiset );
+       
 
 
 
