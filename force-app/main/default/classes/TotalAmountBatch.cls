@@ -1,6 +1,8 @@
 global class TotalAmountBatch implements 
     Database.Batchable<sObject>, Database.Stateful {
     
+    private List<Account> resList = new List<Account>();
+    
     global Integer amount = 0;
     global Database.QueryLocator start(Database.BatchableContext bc) {
         return Database.getQueryLocator('SELECT Id, Total_Amount__c, ParentId, '+
@@ -78,10 +80,10 @@ global class TotalAmountBatch implements
         // process each batch of records
         Decimal tA = 0;
         Decimal sum = 0;
-        List<Opportunity> opps = new List<Opportunity>();
+
         List<Account> leafAccs = new List<Account>();
         List<Account> fiveAccs = new List<Account>();
-        //получаем лист нижних элементов
+        // получаем лист нижних элементов
         leafAccs = leafElements(scope);
         // считаем для них total amount
         for (Account ac : leafAccs) {
@@ -121,7 +123,7 @@ global class TotalAmountBatch implements
         // тут имеем посчитанные акки нижнего и предпоследнего уровня, аналогичным образом должны считаться 5-4 4-3 3-2 2-1
         // пишем функцию принимающую лист нижнего и возвращающую лист верхнего уровня с уже посчитанными tA
         
-        List<Account> resList = new List<Account>();
+
         resList.addAll(leafAccs);
         //передали в результирующую коллекцию нижние элементы
         List<Account> tmpList = new List<Account>();
@@ -134,43 +136,21 @@ global class TotalAmountBatch implements
             resList.addAll(tmpList); 
         }
         System.debug (' *-*-*-*-*-* ' + resList );
-       
-
-
-
-        for (Account account : scope) {
-            if (account.ParentId != null) {
-                //сюда пишем то, что делать если это не вершина
-            } else {
-                //обнуляем сумму для этой вершины
-                sum = 0;
-                //сюда, если вершина. Ищем ссылки на вершину
-                for (Account ac :  searchLinks(account.Id, scope)) {
-                    sum = 0;
-                    //смотрим каждый ссылающийся на наш акк другой акк
-                    //для каждого акка берем список его оппсов и суммируем их эмаунты
-                    for (Opportunity opp : ac.Opportunities) {
-                        sum += opp.Amount;
-                    }
-                    ac.Total_Amount__c += sum;
-                    
-                    //для каждого из акков также ищем, есть ли у него родитель
-                    if (ac.ParentId != null) {
-                        
-                    }
-
-
-
-                    sum += ac.Total_Amount__c;
-                    //opportunities .amount sum
-                }
-            }
-          
-        }
+ 
+        upsert resList; 
         
     }    
     global void finish(Database.BatchableContext bc){
         
         // call some utility to send email
+
+        System.debug(resList.size() + ' records processed. Shazam!');
+        AsyncApexJob job = [SELECT Id, Status, NumberOfErrors, 
+            JobItemsProcessed,
+            TotalJobItems, CreatedBy.Email
+            FROM AsyncApexJob
+            WHERE Id = :bc.getJobId()];
+       
+
     }    
 }
